@@ -5,8 +5,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -73,10 +75,56 @@ public class FileService {
             return LocalDate.parse(cleaned).atStartOfDay();
         }
         LocalDateTime parsed = LocalDateTime.parse(cleaned);
-        LocalDateTime maxExpiry = LocalDateTime.now().plusDays(MAX_EXPIRY_DAYS);
+        LocalDateTime now = LocalDateTime.now();
+        if (parsed.isBefore(now)) {
+            throw new RuntimeException("La date d'expiration doit être dans le futur");
+        }
+        LocalDateTime maxExpiry = now.plusDays(MAX_EXPIRY_DAYS);
         if (parsed.isAfter(maxExpiry)) {
             throw new RuntimeException("Date d'expiration trop lointaine (max 7 jours)");
         }
         return parsed;
+    }
+
+    public List<FileEntity> getUserFiles(String userId) {
+        return fileRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public void deleteFile(String fileId, String userId) {
+        FileEntity file = fileRepository.findByIdAndUserId(fileId, userId)
+                .orElseThrow(() -> new RuntimeException("Fichier introuvable"));
+        try {
+            storageService.delete(file.getId());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la suppression du fichier");
+        }
+        fileRepository.delete(file);
+    }
+
+    private void checkExpired(FileEntity file) {
+        if (file.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Ce fichier a expiré");
+        }
+    }
+
+    public FileEntity getFileByToken(String token) {
+        FileEntity file = fileRepository.findByDownloadToken(token)
+                .orElseThrow(() -> new RuntimeException("Fichier introuvable"));
+        checkExpired(file);
+        return file;
+    }
+
+    public Path getFilePath(String token, String password) {
+        FileEntity file = fileRepository.findByDownloadToken(token)
+                .orElseThrow(() -> new RuntimeException("Fichier introuvable"));
+        checkExpired(file);
+
+        if (file.getPassword() != null) {
+            if (password == null || !passwordEncoder.matches(password, file.getPassword())) {
+                throw new RuntimeException("Mot de passe incorrect");
+            }
+        }
+
+        return storageService.getPath(file.getId());
     }
 }

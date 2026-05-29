@@ -1,0 +1,14 @@
+  .dashboard { max-width: 800px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; }
+  .logout { background: #dc3545; color: white; border: none; padding: 8px 16px; cursor: pointer; }
+  .success { color: green; }
+  .error { color: red; }
+  .upload { background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; }
+  .upload input { display: block; margin: 10px 0; padding: 8px; width: 100%; box-sizing: border-box; }
+  .upload button { background: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; }
+  .file-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; display: flex; justify-content: space-between; }
+  .file-info { display: flex; flex-direction: column; gap: 4px; }
+  .file-actions { display: flex; flex-direction: column; gap: 5px; }
+  .copy { background: #17a2b8; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+  .delete { background: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
+  .expired { color: red; font-weight: bold; }

@@ -1,0 +1,10 @@
+  <div class="container">
+    <h2>Connexion</h2>
+    <form (ngSubmit)="login()">
+      <input type="email" [(ngModel)]="email" name="email" placeholder="Email" required>
+      <input type="password" [(ngModel)]="password" name="password" placeholder="Mot de passe" required>
+      <button type="submit">Se connecter</button>
+      <p class="error">{{ error }}</p>
+      <a routerLink="/register">Créer un compte</a>
+    </form>
+  </div>

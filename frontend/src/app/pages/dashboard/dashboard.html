@@ -1,0 +1,42 @@
+<div class="dashboard">
+  <header>
+    <h2>Mes fichiers</h2>
+    <button (click)="logout()" class="logout">Déconnexion</button>
+  </header>
+
+  @if (success) {
+    <p class="success">{{ success }}</p>
+  }
+  @if (error) {
+    <p class="error">{{ error }}</p>
+  }
+
+  <section class="upload">
+    <h3>Uploader un fichier</h3>
+    <input type="file" #fileInput (change)="onFileSelected($event)">
+    <input type="password" [(ngModel)]="password" name="password" placeholder="Mot de passe (optionnel)">
+    <input type="date" [(ngModel)]="expiresAt" name="expiresAt">
+    <button (click)="upload()" [disabled]="!selectedFile">Uploader</button>
+  </section>
+
+  <section class="files">
+    <h3>Mes fichiers</h3>
+    @if (files.length === 0) {
+      <div>Aucun fichier</div>
+    }
+    @for (f of files; track f.id) {
+      <div class="file-card">
+        <div class="file-info">
+          <strong>{{ f.fileName }}</strong>
+          <span>{{ f.fileSize }} octets</span>
+          <span [class.expired]="f.status === 'EXPIRED'">{{ f.status }}</span>
+          <span>Expire le {{ f.expiresAt }}</span>
+        </div>
+        <div class="file-actions">
+          <button (click)="copyLink(f.downloadToken)" class="copy">Copier le lien</button>
+          <button (click)="deleteFile(f.id)" class="delete">Supprimer</button>
+        </div>
+      </div>
+    }
+  </section>
+</div>

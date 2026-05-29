@@ -1,0 +1,5 @@
+  .container { max-width: 500px; margin: 50px auto; padding: 20px; text-align: center; }
+  .file-info { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+  input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+  button { background: #007bff; color: white; border: none; padding: 10px 30px; cursor: pointer; }
+  .error { color: red; }

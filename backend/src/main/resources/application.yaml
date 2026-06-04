@@ -17,6 +17,13 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+logging:
+  pattern:
+    console: "{\"timestamp\":\"%d{ISO8601}\",\"level\":\"%p\",\"logger\":\"%c\",\"message\":\"%m\"}%n"
+  level:
+    com.datashare: DEBUG
+    org.springframework.web: INFO
+
 server:
   port: 8080
 

@@ -74,3 +74,40 @@ Cette configuration produit des logs JSON exploitables par **ELK**, **Grafana Lo
 | Uploads échoués | Logs | > 0 |
 | Espace disque stockage | Système | < 20% libre |
 | Taille des fichiers | Logs | > 500 Mo |
+
+## Budget frontend
+
+### Build production (Angular 21)
+
+```bash
+ng build --configuration production
+```
+
+**Temps de build :** 16 secondes
+
+### Taille des bundles
+
+| Fichier | Raw size | Transfer size |
+|---------|----------|---------------|
+| Initial total | **280.92 kB** | **78.69 kB** |
+| `polyfills` (zone.js, etc.) | 35.78 kB | 11.63 kB |
+| `main` (bootstrap) | 1.13 kB | 547 B |
+| `styles` | 0 B | 0 B |
+| Dashboard (lazy) | 5.19 kB | 1.80 kB |
+| Register (lazy) | 2.25 kB | 892 B |
+| Login (lazy) | 1.78 kB | 764 B |
+| Download (lazy) | 2.66 kB | 1.10 kB |
+
+### Budgets configurés (angular.json)
+
+| Type | Warning | Error |
+|------|---------|-------|
+| Initial bundle | 500 kB | 1 MB |
+| Component style | 4 kB | 8 kB |
+
+### Analyse
+
+- **Initial total à 78.69 kB (transfer)** — très léger, bien sous le budget warning de 500 kB
+- **Lazy loading** — les pages (dashboard, login, register, download) sont chargées à la demande, pas dans le bundle initial
+- **Pas de dépendances lourdes** — pas de Material UI, Bootstrap, chart.js, etc. Le bundle reste minimal
+- **Styles à 0 B** — les styles sont inlinés dans les composants Angular (pas de fichier CSS externe)

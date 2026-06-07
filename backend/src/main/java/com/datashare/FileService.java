@@ -4,6 +4,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -20,6 +24,7 @@ public class FileService {
 
     private static final long MAX_FILE_SIZE = 1024L * 1024L * 1024L; // 1 Go
     private static final long MAX_EXPIRY_DAYS = 7;
+    private static final Logger log = LoggerFactory.getLogger(FileService.class);
 
     public FileService(FileRepository fileRepository, StorageService storageService, PasswordEncoder passwordEncoder) {
         this.fileRepository = fileRepository;
@@ -126,5 +131,24 @@ public class FileService {
         }
 
         return storageService.getPath(file.getId());
+    }
+
+    @Scheduled(cron = "0 0 3 * * *")
+    public void cleanupExpiredFiles() {
+        List<FileEntity> expiredFiles = fileRepository.findByExpiresAtBefore(LocalDateTime.now());
+        if (expiredFiles.isEmpty()) {
+            return;
+        }
+        log.info("Nettoyage de {} fichier(s) expiré(s)", expiredFiles.size());
+        for (FileEntity file : expiredFiles) {
+            try {
+                storageService.delete(file.getId());
+                log.info("Fichier supprimé du disque : {}", file.getId());
+            } catch (IOException e) {
+                log.warn("Impossible de supprimer le fichier du disque : {}", file.getId());
+            }
+            fileRepository.delete(file);
+        }
+        log.info("Nettoyage terminé : {} fichier(s) supprimé(s)", expiredFiles.size());
     }
 }

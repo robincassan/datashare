@@ -385,3 +385,153 @@ Les procédures de maintenance sont détaillées dans [MAINTENANCE.md](../MAINTE
 - Sauvegarde et restauration PostgreSQL
 - Gestion de l'espace disque (nettoyage automatique des fichiers expirés)
 - Résolution des problèmes courants (port utilisé, upload échoue)
+
+## 11. Utilisation de l'IA dans le développement
+
+### Rôle de l'IA
+
+L'IA (Claude Code) a été utilisée comme **co-pilote de développement** sur l'**US01 — Upload de fichier**, ainsi que pour des tâches transverses tout au long du projet.
+
+### US01 confiée à l'IA
+
+L'US01 a été développée intégralement par l'IA :
+
+| Fichier | Rôle |
+|---------|------|
+| `FileEntity.java` | Entité JPA (nom, taille, type MIME, mot de passe hashé, expiration, token) |
+| `FileRepository.java` | Accès base de données (recherche par utilisateur, token, id) |
+| `StorageService.java` | Stockage et suppression des fichiers sur le disque |
+| `FileService.java` | Logique métier (validation, hash, parsing date, rollback) |
+| `FileController.java` | Endpoint REST `POST /api/files/upload` |
+
+### Méthode de travail avec l'IA
+
+Le développement s'est fait par **itérations courtes** : l'IA proposait une implémentation, je la validais, testais, et demandais des ajustements si nécessaire. Les prompts étaient formulés en français, sous forme de spécifications fonctionnelles (ex : "implémente l'upload de fichier avec validation de taille, mot de passe optionnel et date d'expiration").
+
+### Supervision et vérifications humaines
+
+Chaque livrable de l'IA a été contrôlé :
+
+| Vérification | Exemple |
+|-------------|---------|
+| **Architecture** | Séparation FileService (métier) / StorageService (disque) validée |
+| **Sécurité** | Correction du SecurityContext Spring (le filtre JWT ne remplissait pas l'authentification) |
+| **Contrat d'interface** | Création du record `FileResponse` pour ne pas exposer l'entité JPA complète |
+| **Codes HTTP** | Correction 400 → 409 pour email déjà utilisé |
+| **CORS** | Passage de `setAllowedOrigins` à `setAllowedOriginPatterns` |
+
+### Utilisation transverse
+
+Au-delà de l'US01, l'IA a assisté sur :
+- **Tests** : génération des tests unitaires JUnit/Vitest et analyse des rapports de couverture
+- **Débogage** : analyse des logs d'erreur (dépendances, configuration, CORS)
+- **Infrastructure** : création du docker-compose.yml, script de déploiement setup.sh
+- **Qualité** : exécution OWASP Dependency Check, configuration des budgets de performance Angular
+
+## 12. Documentation d'API
+
+### Authentification
+
+#### `POST /api/auth/register` — Création de compte
+
+**Corps (JSON) :**
+```json
+{
+  "email": "user@example.com",
+  "password": "monMotDePasse123"
+}
+```
+
+**Contraintes :** email valide, password ≥ 8 caractères.
+
+**Réponses :**
+| Code | Description |
+|------|-------------|
+| 201 | Compte créé — retourne `{id, email}` |
+| 409 | Email déjà utilisé |
+
+#### `POST /api/auth/login` — Connexion
+
+**Corps (JSON) :**
+```json
+{
+  "email": "user@example.com",
+  "password": "monMotDePasse123"
+}
+```
+
+**Réponses :**
+| Code | Description |
+|------|-------------|
+| 200 | Token JWT — retourne `{token: "jwt..."}` |
+| 401 | Identifiants incorrects |
+
+### Fichiers (authentification requise)
+
+Tous les endpoints ci-dessous nécessitent le header : `Authorization: Bearer <token>`
+
+#### `POST /api/files/upload` — Upload d'un fichier
+
+**Paramètres (multipart/form-data) :**
+| Paramètre | Type | Obligatoire | Description |
+|-----------|------|-------------|-------------|
+| file | File | Oui | Fichier à uploader (max 1 Go) |
+| password | String | Non | Mot de passe (min 6 car.) |
+| expiresAt | String | Non | Date ISO (max 7 jours) |
+
+**Réponse (201) :**
+```json
+{
+  "id": "uuid",
+  "fileName": "document.pdf",
+  "fileSize": 1024000,
+  "expiresAt": "2026-06-10T00:00:00Z",
+  "downloadLink": "http://localhost:8080/api/files/token/download"
+}
+```
+
+#### `GET /api/files` — Historique des fichiers
+
+**Réponse (200) :** tableau d'objets :
+```json
+[{
+  "id": "uuid",
+  "fileName": "document.pdf",
+  "fileSize": 1024000,
+  "expiresAt": "2026-06-10T00:00:00Z",
+  "status": "ACTIVE",
+  "downloadToken": "token-unique"
+}]
+```
+
+#### `DELETE /api/files/{id}` — Suppression
+
+**Réponses :** 204 (succès), 404 (introuvable), 401 (non authentifié)
+
+### Fichiers (publics)
+
+#### `GET /api/files/{token}` — Informations du fichier
+
+**Réponse (200) :**
+```json
+{
+  "fileName": "document.pdf",
+  "fileSize": 1024000,
+  "expiresAt": "2026-06-10T00:00:00Z",
+  "hasPassword": true,
+  "expired": false
+}
+```
+
+#### `POST /api/files/{token}/download` — Téléchargement
+
+**Header :** `Content-Type: application/json`
+
+**Corps (optionnel si protégé) :**
+```json
+{
+  "password": "mot-de-passe"
+}
+```
+
+**Réponse :** Fichier en attachement (Content-Disposition: attachment).
